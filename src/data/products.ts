@@ -13,6 +13,7 @@ export interface Product {
   price: number;
   originalPrice?: number;
   image: string;
+  images: string[];
   category: "men" | "women" | "baby";
   subcategory: string;
   isNew?: boolean;
@@ -28,6 +29,7 @@ export const products: Product[] = [
     name: "Cream Wool Sweater",
     price: 189,
     image: product1,
+    images: [product1, product2, product3, product5],
     category: "women",
     subcategory: "Knitwear",
     isNew: true,
@@ -41,6 +43,7 @@ export const products: Product[] = [
     price: 245,
     originalPrice: 320,
     image: product2,
+    images: [product2, product1, product7, product3],
     category: "women",
     subcategory: "Outerwear",
     isSale: true,
@@ -53,6 +56,7 @@ export const products: Product[] = [
     name: "Beige Wide-Leg Trousers",
     price: 165,
     image: product3,
+    images: [product3, product7, product2, product1],
     category: "women",
     subcategory: "Trousers",
     description: "High-waisted wide-leg trousers in premium cotton. Elegant silhouette for office or evening.",
@@ -64,6 +68,7 @@ export const products: Product[] = [
     name: "Charcoal Wool Coat",
     price: 385,
     image: product4,
+    images: [product4, product8, product4, product8],
     category: "men",
     subcategory: "Outerwear",
     isNew: true,
@@ -76,6 +81,7 @@ export const products: Product[] = [
     name: "Cashmere Scarf",
     price: 125,
     image: product5,
+    images: [product5, product1, product7, product5],
     category: "women",
     subcategory: "Accessories",
     description: "Incredibly soft 100% cashmere scarf with subtle fringe detail. Essential luxury piece.",
@@ -87,6 +93,7 @@ export const products: Product[] = [
     name: "Organic Cotton Onesie",
     price: 45,
     image: product6,
+    images: [product6, product6, product6, product6],
     category: "baby",
     subcategory: "Bodysuits",
     isNew: true,
@@ -99,6 +106,7 @@ export const products: Product[] = [
     name: "Sage Linen Shirt",
     price: 135,
     image: product7,
+    images: [product7, product3, product2, product1],
     category: "women",
     subcategory: "Tops",
     description: "Relaxed-fit linen shirt in calming sage green. Perfect for effortless summer style.",
@@ -110,6 +118,7 @@ export const products: Product[] = [
     name: "Essential Cotton Tee",
     price: 65,
     image: product8,
+    images: [product8, product4, product8, product4],
     category: "men",
     subcategory: "T-Shirts",
     description: "Premium heavyweight cotton t-shirt with perfect drape. A wardrobe essential.",
