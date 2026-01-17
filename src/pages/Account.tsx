@@ -1,13 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, Package, Heart, MapPin, LogOut } from "lucide-react";
+import { User, Package, Heart, MapPin, LogOut, Trash2, ShoppingBag } from "lucide-react";
+import { Link } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
+import { useWishlist } from "@/context/WishlistContext";
+import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 
 const Account = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
   const [isLogin, setIsLogin] = useState(true);
+  const { items: wishlistItems, removeFromWishlist, clearWishlist } = useWishlist();
+  const { addToCart } = useCart();
+
+  // Check for tab preference from header navigation
+  useEffect(() => {
+    const savedTab = sessionStorage.getItem("account_tab");
+    if (savedTab) {
+      setActiveTab(savedTab);
+      sessionStorage.removeItem("account_tab");
+    }
+  }, []);
 
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
@@ -15,10 +29,15 @@ const Account = () => {
     toast.success(isLogin ? "Welcome back!" : "Account created successfully!");
   };
 
+  const handleAddToCart = (product: any) => {
+    addToCart(product, product.sizes[0], product.colors[0]);
+    toast.success(`${product.name} added to cart`);
+  };
+
   const tabs = [
     { id: "profile", label: "Profile", icon: User },
     { id: "orders", label: "Orders", icon: Package },
-    { id: "wishlist", label: "Wishlist", icon: Heart },
+    { id: "wishlist", label: "Wishlist", icon: Heart, count: wishlistItems.length },
     { id: "addresses", label: "Addresses", icon: MapPin },
   ];
 
@@ -119,14 +138,25 @@ const Account = () => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors ${
+                    className={`w-full flex items-center justify-between px-4 py-3 text-sm text-left transition-colors ${
                       activeTab === tab.id
                         ? "bg-primary text-primary-foreground"
                         : "hover:bg-secondary"
                     }`}
                   >
-                    <tab.icon className="w-4 h-4" />
-                    {tab.label}
+                    <span className="flex items-center gap-3">
+                      <tab.icon className="w-4 h-4" />
+                      {tab.label}
+                    </span>
+                    {tab.count !== undefined && tab.count > 0 && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        activeTab === tab.id 
+                          ? "bg-primary-foreground/20" 
+                          : "bg-accent text-accent-foreground"
+                      }`}>
+                        {tab.count}
+                      </span>
+                    )}
                   </button>
                 ))}
                 <button
@@ -191,9 +221,82 @@ const Account = () => {
                 )}
 
                 {activeTab === "wishlist" && (
-                  <div className="text-center py-12">
-                    <Heart className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
-                    <p className="text-muted-foreground">Your wishlist is empty</p>
+                  <div>
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="font-serif text-xl">My Wishlist</h2>
+                      {wishlistItems.length > 0 && (
+                        <button
+                          onClick={() => {
+                            clearWishlist();
+                            toast.success("Wishlist cleared");
+                          }}
+                          className="text-sm text-destructive hover:underline"
+                        >
+                          Clear All
+                        </button>
+                      )}
+                    </div>
+                    
+                    {wishlistItems.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {wishlistItems.map((product) => (
+                          <div
+                            key={product.id}
+                            className="flex gap-4 bg-background p-4"
+                          >
+                            <Link
+                              to={`/product/${product.id}`}
+                              className="w-24 h-32 bg-muted flex-shrink-0 overflow-hidden"
+                            >
+                              <img
+                                src={product.image}
+                                alt={product.name}
+                                className="w-full h-full object-cover hover:scale-105 transition-transform"
+                              />
+                            </Link>
+                            <div className="flex-1 flex flex-col">
+                              <Link
+                                to={`/product/${product.id}`}
+                                className="font-medium hover:text-accent transition-colors"
+                              >
+                                {product.name}
+                              </Link>
+                              <p className="text-sm text-muted-foreground capitalize">
+                                {product.category} • {product.subcategory}
+                              </p>
+                              <p className="font-medium mt-1">৳{product.price}</p>
+                              <div className="flex gap-2 mt-auto">
+                                <button
+                                  onClick={() => handleAddToCart(product)}
+                                  className="flex-1 flex items-center justify-center gap-2 py-2 bg-primary text-primary-foreground text-xs hover:opacity-90 transition-opacity"
+                                >
+                                  <ShoppingBag className="w-3 h-3" />
+                                  Add to Cart
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    removeFromWishlist(product.id);
+                                    toast.success("Removed from wishlist");
+                                  }}
+                                  className="p-2 text-destructive hover:bg-destructive/10 transition-colors"
+                                  aria-label="Remove from wishlist"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <Heart className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
+                        <p className="text-muted-foreground mb-4">Your wishlist is empty</p>
+                        <Link to="/shop/women" className="btn-outline">
+                          Start Shopping
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 )}
 

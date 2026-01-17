@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Heart } from "lucide-react";
 import { Product } from "@/data/products";
+import { useWishlist } from "@/context/WishlistContext";
+import { toast } from "sonner";
 
 interface ProductCardProps {
   product: Product;
@@ -9,6 +11,21 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const isWishlisted = isInWishlist(product.id);
+
+  const handleWishlistClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isWishlisted) {
+      removeFromWishlist(product.id);
+      toast.success("Removed from wishlist");
+    } else {
+      addToWishlist(product);
+      toast.success("Added to wishlist");
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -24,13 +41,15 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
           <button
-            className="absolute top-3 right-3 p-2 bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:text-accent"
-            onClick={(e) => {
-              e.preventDefault();
-              // Wishlist functionality
-            }}
+            className={`absolute top-3 right-3 p-2 bg-background/80 backdrop-blur-sm transition-all ${
+              isWishlisted 
+                ? "opacity-100 text-accent" 
+                : "opacity-0 group-hover:opacity-100 hover:text-accent"
+            }`}
+            onClick={handleWishlistClick}
+            aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
           >
-            <Heart className="w-4 h-4" />
+            <Heart className={`w-4 h-4 ${isWishlisted ? "fill-current" : ""}`} />
           </button>
           {product.isNew && (
             <span className="absolute top-3 left-3 bg-primary text-primary-foreground text-xs px-2 py-1 tracking-wider uppercase">
