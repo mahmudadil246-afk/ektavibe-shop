@@ -146,7 +146,7 @@
   }
 
   .card-product {
-    @apply group cursor-pointer;
+    @apply cursor-pointer;
   }
 
   .card-product-image {
