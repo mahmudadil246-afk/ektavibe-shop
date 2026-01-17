@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Heart } from "lucide-react";
+import { Heart, Star } from "lucide-react";
 import { Product } from "@/data/products";
 import { useWishlist } from "@/context/WishlistContext";
 import { toast } from "sonner";
+import QuickViewModal from "./QuickViewModal";
 
 interface ProductCardProps {
   product: Product;
@@ -12,6 +14,7 @@ interface ProductCardProps {
 
 const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   const isWishlisted = isInWishlist(product.id);
 
   const handleWishlistClick = (e: React.MouseEvent) => {
@@ -26,63 +29,96 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
     }
   };
 
+  const handleQuickViewClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsQuickViewOpen(true);
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.1 }}
-      className="card-product group"
-    >
-      <Link to={`/product/${product.id}`}>
-        <div className="card-product-image relative">
-          <img
-            src={product.image}
-            alt={product.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-          <button
-            className={`absolute top-3 right-3 p-2 bg-background/80 backdrop-blur-sm transition-all ${
-              isWishlisted 
-                ? "opacity-100 text-accent" 
-                : "opacity-0 group-hover:opacity-100 hover:text-accent"
-            }`}
-            onClick={handleWishlistClick}
-            aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-          >
-            <Heart className={`w-4 h-4 ${isWishlisted ? "fill-current" : ""}`} />
-          </button>
-          {product.isNew && (
-            <span className="absolute top-3 left-3 bg-primary text-primary-foreground text-xs px-2 py-1 tracking-wider uppercase">
-              New
-            </span>
-          )}
-          {product.isSale && (
-            <span className="absolute top-3 left-3 bg-accent text-accent-foreground text-xs px-2 py-1 tracking-wider uppercase">
-              Sale
-            </span>
-          )}
-          <div className="absolute bottom-0 left-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button className="w-full bg-primary text-primary-foreground py-2.5 text-xs font-medium tracking-wider uppercase hover:bg-accent transition-colors">
-              Quick View
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: index * 0.1 }}
+        className="card-product group"
+      >
+        <Link to={`/product/${product.id}`}>
+          <div className="card-product-image relative">
+            <img
+              src={product.image}
+              alt={product.name}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+            <button
+              className={`absolute top-3 right-3 p-2 bg-background/80 backdrop-blur-sm transition-all ${
+                isWishlisted 
+                  ? "opacity-100 text-accent" 
+                  : "opacity-0 group-hover:opacity-100 hover:text-accent"
+              }`}
+              onClick={handleWishlistClick}
+              aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+            >
+              <Heart className={`w-4 h-4 ${isWishlisted ? "fill-current" : ""}`} />
             </button>
+            {product.isNew && (
+              <span className="absolute top-3 left-3 bg-primary text-primary-foreground text-xs px-2 py-1 tracking-wider uppercase">
+                New
+              </span>
+            )}
+            {product.isSale && (
+              <span className="absolute top-3 left-3 bg-accent text-accent-foreground text-xs px-2 py-1 tracking-wider uppercase">
+                Sale
+              </span>
+            )}
+            <div className="absolute bottom-0 left-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button 
+                onClick={handleQuickViewClick}
+                className="w-full bg-primary text-primary-foreground py-2.5 text-xs font-medium tracking-wider uppercase hover:bg-accent transition-colors"
+              >
+                Quick View
+              </button>
+            </div>
+          </div>
+        </Link>
+        <div className="mt-4 space-y-1">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">{product.subcategory}</p>
+          <h3 className="font-medium text-sm">
+            <Link to={`/product/${product.id}`} className="hover:text-accent transition-colors">
+              {product.name}
+            </Link>
+          </h3>
+          {/* Rating */}
+          <div className="flex items-center gap-1">
+            <div className="flex items-center">
+              {[...Array(5)].map((_, i) => (
+                <Star
+                  key={i}
+                  className={`w-3 h-3 ${
+                    i < Math.floor(product.rating)
+                      ? "fill-accent text-accent"
+                      : "text-muted-foreground/30"
+                  }`}
+                />
+              ))}
+            </div>
+            <span className="text-xs text-muted-foreground">({product.reviews.length})</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-medium">৳{product.price}</span>
+            {product.originalPrice && (
+              <span className="text-muted-foreground line-through text-sm">৳{product.originalPrice}</span>
+            )}
           </div>
         </div>
-      </Link>
-      <div className="mt-4 space-y-1">
-        <p className="text-xs text-muted-foreground uppercase tracking-wider">{product.subcategory}</p>
-        <h3 className="font-medium text-sm">
-          <Link to={`/product/${product.id}`} className="hover:text-accent transition-colors">
-            {product.name}
-          </Link>
-        </h3>
-        <div className="flex items-center gap-2">
-          <span className="font-medium">৳{product.price}</span>
-          {product.originalPrice && (
-            <span className="text-muted-foreground line-through text-sm">৳{product.originalPrice}</span>
-          )}
-        </div>
-      </div>
-    </motion.div>
+      </motion.div>
+
+      <QuickViewModal
+        product={product}
+        isOpen={isQuickViewOpen}
+        onClose={() => setIsQuickViewOpen(false)}
+      />
+    </>
   );
 };
 
