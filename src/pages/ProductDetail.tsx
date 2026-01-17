@@ -6,6 +6,7 @@ import Layout from "@/components/layout/Layout";
 import ProductCard from "@/components/product/ProductCard";
 import ProductGallery from "@/components/product/ProductGallery";
 import ProductReviews from "@/components/product/ProductReviews";
+import SizeGuideModal from "@/components/product/SizeGuideModal";
 import { getProductById, products } from "@/data/products";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
@@ -20,6 +21,7 @@ const ProductDetail = () => {
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
 
   if (!product) {
     return (
@@ -182,7 +184,12 @@ const ProductDetail = () => {
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-medium">Size</span>
-                <button className="text-sm text-accent link-underline">Size Guide</button>
+                <button 
+                  onClick={() => setIsSizeGuideOpen(true)}
+                  className="text-sm text-accent link-underline"
+                >
+                  Size Guide
+                </button>
               </div>
               <div className="flex flex-wrap gap-2">
                 {product.sizes.map((size) => (
@@ -284,6 +291,13 @@ const ProductDetail = () => {
           </div>
         </section>
       )}
+
+      {/* Size Guide Modal */}
+      <SizeGuideModal
+        isOpen={isSizeGuideOpen}
+        onClose={() => setIsSizeGuideOpen(false)}
+        category={product.category}
+      />
     </Layout>
   );
 };
