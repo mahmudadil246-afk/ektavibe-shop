@@ -1,18 +1,21 @@
 import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Minus, Plus, Heart, Share2, ChevronRight, Truck, RefreshCw, Shield } from "lucide-react";
+import { Minus, Plus, Heart, Share2, ChevronRight, Truck, RefreshCw, Shield, Star } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import ProductCard from "@/components/product/ProductCard";
 import ProductGallery from "@/components/product/ProductGallery";
+import ProductReviews from "@/components/product/ProductReviews";
 import { getProductById, products } from "@/data/products";
 import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 import { toast } from "sonner";
 
 const ProductDetail = () => {
   const { id } = useParams();
   const product = getProductById(id || "");
   const { addToCart } = useCart();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
@@ -35,6 +38,8 @@ const ProductDetail = () => {
     .filter((p) => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
 
+  const isWishlisted = isInWishlist(product.id);
+
   const handleAddToCart = () => {
     if (!selectedSize) {
       toast.error("Please select a size");
@@ -48,6 +53,20 @@ const ProductDetail = () => {
       addToCart(product, selectedSize, selectedColor);
     }
     toast.success(`${product.name} added to cart`);
+  };
+
+  const handleWishlistClick = () => {
+    if (isWishlisted) {
+      removeFromWishlist(product.id);
+      toast.success("Removed from wishlist");
+    } else {
+      addToWishlist(product);
+      toast.success("Added to wishlist");
+    }
+  };
+
+  const scrollToReviews = () => {
+    document.getElementById("reviews-section")?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
@@ -103,7 +122,29 @@ const ProductDetail = () => {
               )}
             </div>
 
-            <h1 className="heading-section mb-4">{product.name}</h1>
+            <h1 className="heading-section mb-2">{product.name}</h1>
+
+            {/* Rating Summary */}
+            <button 
+              onClick={scrollToReviews}
+              className="flex items-center gap-2 mb-4 group"
+            >
+              <div className="flex items-center gap-1">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`w-4 h-4 ${
+                      i < Math.floor(product.rating)
+                        ? "fill-accent text-accent"
+                        : "text-muted-foreground/30"
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="text-sm text-muted-foreground group-hover:text-accent transition-colors">
+                {product.rating.toFixed(1)} ({product.reviews.length} reviews)
+              </span>
+            </button>
 
             <div className="flex items-baseline gap-3 mb-6">
               <span className="font-serif text-2xl">৳{product.price}</span>
@@ -187,8 +228,15 @@ const ProductDetail = () => {
               <button onClick={handleAddToCart} className="btn-primary flex-1">
                 Add to Cart
               </button>
-              <button className="p-3 border border-border hover:border-accent hover:text-accent transition-colors">
-                <Heart className="w-5 h-5" />
+              <button 
+                onClick={handleWishlistClick}
+                className={`p-3 border transition-colors ${
+                  isWishlisted
+                    ? "border-accent bg-accent/10 text-accent"
+                    : "border-border hover:border-accent hover:text-accent"
+                }`}
+              >
+                <Heart className={`w-5 h-5 ${isWishlisted ? "fill-current" : ""}`} />
               </button>
               <button className="p-3 border border-border hover:border-accent hover:text-accent transition-colors">
                 <Share2 className="w-5 h-5" />
@@ -213,6 +261,15 @@ const ProductDetail = () => {
           </motion.div>
         </div>
       </section>
+
+      {/* Reviews Section */}
+      <div id="reviews-section">
+        <ProductReviews 
+          reviews={product.reviews} 
+          rating={product.rating} 
+          productName={product.name}
+        />
+      </div>
 
       {/* Related Products */}
       {relatedProducts.length > 0 && (
