@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Minus, Plus, Heart, Share2, ChevronRight, Truck, RefreshCw, Shield } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import ProductCard from "@/components/product/ProductCard";
+import ProductGallery from "@/components/product/ProductGallery";
 import { getProductById, products } from "@/data/products";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
@@ -67,17 +68,15 @@ const ProductDetail = () => {
       {/* Product */}
       <section className="container-wide px-4 md:px-8 pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
-          {/* Image */}
+          {/* Image Gallery */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
-            className="aspect-[3/4] bg-secondary"
           >
-            <img
-              src={product.image}
-              alt={product.name}
-              className="w-full h-full object-cover"
+            <ProductGallery 
+              images={product.images} 
+              productName={product.name} 
             />
           </motion.div>
 
