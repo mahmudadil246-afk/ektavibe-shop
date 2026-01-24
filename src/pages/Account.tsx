@@ -8,7 +8,8 @@ import {
   MapPin, 
   RotateCcw, 
   Shield, 
-  LogOut 
+  LogOut,
+  Bell
 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { useWishlist } from "@/context/WishlistContext";
@@ -20,6 +21,7 @@ import AccountWishlist from "@/components/account/AccountWishlist";
 import AccountAddresses from "@/components/account/AccountAddresses";
 import AccountReturns from "@/components/account/AccountReturns";
 import AccountSecurity from "@/components/account/AccountSecurity";
+import AccountNotifications from "@/components/account/AccountNotifications";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,6 +69,7 @@ const Account = () => {
     { id: "wishlist", label: "Wishlist", icon: Heart, count: wishlistItems.length },
     { id: "addresses", label: "Addresses", icon: MapPin },
     { id: "returns", label: "Returns & Refunds", icon: RotateCcw },
+    { id: "notifications", label: "Notifications", icon: Bell },
     { id: "security", label: "Security", icon: Shield },
   ];
 
@@ -167,6 +170,8 @@ const Account = () => {
         return <AccountAddresses />;
       case 'returns':
         return <AccountReturns />;
+      case 'notifications':
+        return <AccountNotifications />;
       case 'security':
         return <AccountSecurity onLogout={() => handleLogout()} />;
       default:
