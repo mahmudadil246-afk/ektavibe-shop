@@ -1,18 +1,43 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, Package, Heart, MapPin, LogOut, Trash2, ShoppingBag } from "lucide-react";
-import { Link } from "react-router-dom";
+import { 
+  LayoutDashboard, 
+  User, 
+  Package, 
+  Heart, 
+  MapPin, 
+  RotateCcw, 
+  Shield, 
+  LogOut 
+} from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { useWishlist } from "@/context/WishlistContext";
-import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
+import AccountDashboard from "@/components/account/AccountDashboard";
+import AccountProfile from "@/components/account/AccountProfile";
+import AccountOrders from "@/components/account/AccountOrders";
+import AccountWishlist from "@/components/account/AccountWishlist";
+import AccountAddresses from "@/components/account/AccountAddresses";
+import AccountReturns from "@/components/account/AccountReturns";
+import AccountSecurity from "@/components/account/AccountSecurity";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Account = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [isLogin, setIsLogin] = useState(true);
-  const { items: wishlistItems, removeFromWishlist, clearWishlist } = useWishlist();
-  const { addToCart } = useCart();
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const { items: wishlistItems } = useWishlist();
+  const userName = "Rahim";
 
   // Check for tab preference from header navigation
   useEffect(() => {
@@ -29,16 +54,20 @@ const Account = () => {
     toast.success(isLogin ? "Welcome back!" : "Account created successfully!");
   };
 
-  const handleAddToCart = (product: any) => {
-    addToCart(product, product.sizes[0], product.colors[0]);
-    toast.success(`${product.name} added to cart`);
+  const handleLogout = (allDevices = false) => {
+    setIsLoggedIn(false);
+    setShowLogoutDialog(false);
+    toast.success(allDevices ? "Logged out from all devices" : "Signed out successfully");
   };
 
   const tabs = [
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "profile", label: "Profile", icon: User },
     { id: "orders", label: "Orders", icon: Package },
     { id: "wishlist", label: "Wishlist", icon: Heart, count: wishlistItems.length },
     { id: "addresses", label: "Addresses", icon: MapPin },
+    { id: "returns", label: "Returns & Refunds", icon: RotateCcw },
+    { id: "security", label: "Security", icon: Shield },
   ];
 
   if (!isLoggedIn) {
@@ -74,7 +103,7 @@ const Account = () => {
                   <input
                     type="text"
                     required
-                    className="w-full bg-secondary border-none px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+                    className="w-full bg-secondary border-none px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent rounded-md"
                     placeholder="Your name"
                   />
                 </div>
@@ -84,7 +113,7 @@ const Account = () => {
                 <input
                   type="email"
                   required
-                  className="w-full bg-secondary border-none px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+                  className="w-full bg-secondary border-none px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent rounded-md"
                   placeholder="your@email.com"
                 />
               </div>
@@ -93,7 +122,7 @@ const Account = () => {
                 <input
                   type="password"
                   required
-                  className="w-full bg-secondary border-none px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+                  className="w-full bg-secondary border-none px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent rounded-md"
                   placeholder="••••••••"
                 />
               </div>
@@ -124,21 +153,42 @@ const Account = () => {
     );
   }
 
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return <AccountDashboard onTabChange={setActiveTab} userName={userName} />;
+      case 'profile':
+        return <AccountProfile userName={userName} onLogout={() => handleLogout()} />;
+      case 'orders':
+        return <AccountOrders />;
+      case 'wishlist':
+        return <AccountWishlist />;
+      case 'addresses':
+        return <AccountAddresses />;
+      case 'returns':
+        return <AccountReturns />;
+      case 'security':
+        return <AccountSecurity onLogout={() => handleLogout()} />;
+      default:
+        return <AccountDashboard onTabChange={setActiveTab} userName={userName} />;
+    }
+  };
+
   return (
     <Layout>
       <section className="section-padding">
-        <div className="container-wide max-w-5xl mx-auto">
+        <div className="container-wide max-w-6xl mx-auto">
           <h1 className="heading-section mb-8">My Account</h1>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
             {/* Sidebar */}
-            <div className="md:col-span-1">
-              <nav className="space-y-2">
+            <div className="lg:col-span-1">
+              <nav className="space-y-1 sticky top-24">
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center justify-between px-4 py-3 text-sm text-left transition-colors ${
+                    className={`w-full flex items-center justify-between px-4 py-3 text-sm text-left transition-colors rounded-lg ${
                       activeTab === tab.id
                         ? "bg-primary text-primary-foreground"
                         : "hover:bg-secondary"
@@ -146,7 +196,7 @@ const Account = () => {
                   >
                     <span className="flex items-center gap-3">
                       <tab.icon className="w-4 h-4" />
-                      {tab.label}
+                      <span className="hidden sm:inline lg:inline">{tab.label}</span>
                     </span>
                     {tab.count !== undefined && tab.count > 0 && (
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -159,159 +209,56 @@ const Account = () => {
                     )}
                   </button>
                 ))}
+                
+                {/* Sign Out Button */}
                 <button
-                  onClick={() => {
-                    setIsLoggedIn(false);
-                    toast.success("Signed out successfully");
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-left text-destructive hover:bg-secondary transition-colors"
+                  onClick={() => setShowLogoutDialog(true)}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-left text-destructive hover:bg-destructive/10 transition-colors rounded-lg mt-4"
                 >
                   <LogOut className="w-4 h-4" />
-                  Sign Out
+                  <span className="hidden sm:inline lg:inline">Sign Out</span>
                 </button>
               </nav>
             </div>
 
             {/* Content */}
-            <div className="md:col-span-3">
+            <div className="lg:col-span-4">
               <motion.div
                 key={activeTab}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-secondary p-6"
+                className="bg-secondary rounded-lg p-6"
               >
-                {activeTab === "profile" && (
-                  <div className="space-y-6">
-                    <h2 className="font-serif text-xl">Profile Information</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">First Name</label>
-                        <input
-                          type="text"
-                          defaultValue="Rahim"
-                          className="w-full bg-background border-none px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Last Name</label>
-                        <input
-                          type="text"
-                          defaultValue="Khan"
-                          className="w-full bg-background border-none px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">Email</label>
-                      <input
-                        type="email"
-                        defaultValue="rahim@example.com"
-                        className="w-full bg-background border-none px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
-                      />
-                    </div>
-                    <button className="btn-primary">Save Changes</button>
-                  </div>
-                )}
-
-                {activeTab === "orders" && (
-                  <div className="text-center py-12">
-                    <Package className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
-                    <p className="text-muted-foreground">No orders yet</p>
-                  </div>
-                )}
-
-                {activeTab === "wishlist" && (
-                  <div>
-                    <div className="flex items-center justify-between mb-6">
-                      <h2 className="font-serif text-xl">My Wishlist</h2>
-                      {wishlistItems.length > 0 && (
-                        <button
-                          onClick={() => {
-                            clearWishlist();
-                            toast.success("Wishlist cleared");
-                          }}
-                          className="text-sm text-destructive hover:underline"
-                        >
-                          Clear All
-                        </button>
-                      )}
-                    </div>
-                    
-                    {wishlistItems.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {wishlistItems.map((product) => (
-                          <div
-                            key={product.id}
-                            className="flex gap-4 bg-background p-4"
-                          >
-                            <Link
-                              to={`/product/${product.id}`}
-                              className="w-24 h-32 bg-muted flex-shrink-0 overflow-hidden"
-                            >
-                              <img
-                                src={product.image}
-                                alt={product.name}
-                                className="w-full h-full object-cover hover:scale-105 transition-transform"
-                              />
-                            </Link>
-                            <div className="flex-1 flex flex-col">
-                              <Link
-                                to={`/product/${product.id}`}
-                                className="font-medium hover:text-accent transition-colors"
-                              >
-                                {product.name}
-                              </Link>
-                              <p className="text-sm text-muted-foreground capitalize">
-                                {product.category} • {product.subcategory}
-                              </p>
-                              <p className="font-medium mt-1">৳{product.price}</p>
-                              <div className="flex gap-2 mt-auto">
-                                <button
-                                  onClick={() => handleAddToCart(product)}
-                                  className="flex-1 flex items-center justify-center gap-2 py-2 bg-primary text-primary-foreground text-xs hover:opacity-90 transition-opacity"
-                                >
-                                  <ShoppingBag className="w-3 h-3" />
-                                  Add to Cart
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    removeFromWishlist(product.id);
-                                    toast.success("Removed from wishlist");
-                                  }}
-                                  className="p-2 text-destructive hover:bg-destructive/10 transition-colors"
-                                  aria-label="Remove from wishlist"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-12">
-                        <Heart className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
-                        <p className="text-muted-foreground mb-4">Your wishlist is empty</p>
-                        <Link to="/shop/women" className="btn-outline">
-                          Start Shopping
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {activeTab === "addresses" && (
-                  <div className="text-center py-12">
-                    <MapPin className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
-                    <p className="text-muted-foreground mb-4">No saved addresses</p>
-                    <button className="btn-outline">Add Address</button>
-                  </div>
-                )}
+                {renderTabContent()}
               </motion.div>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign Out</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to sign out of your account?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <button
+              onClick={() => handleLogout(true)}
+              className="btn-outline text-sm"
+            >
+              Logout All Devices
+            </button>
+            <AlertDialogAction onClick={() => handleLogout(false)}>
+              Sign Out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 };
