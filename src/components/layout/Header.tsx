@@ -1,19 +1,20 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Search, Menu, X, User, Heart } from "lucide-react";
+import { ShoppingBag, Search, Menu, X, User, Heart, Bell } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import CartDrawer from "@/components/cart/CartDrawer";
 import SearchDropdown from "@/components/search/SearchDropdown";
+import NotificationDropdown from "@/components/header/NotificationDropdown";
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const { totalItems, setIsCartOpen } = useCart();
   const { totalItems: wishlistCount } = useWishlist();
   const location = useLocation();
-
   const navLinks = [
     { name: "Women", path: "/shop/women" },
     { name: "Men", path: "/shop/men" },
@@ -74,11 +75,20 @@ const Header = () => {
               >
                 <Search className="w-5 h-5" />
               </button>
+              
+              {/* Notification Bell - Desktop */}
+              <div className="hidden md:block">
+                <NotificationDropdown
+                  isOpen={isNotificationsOpen}
+                  onClose={() => setIsNotificationsOpen(false)}
+                  onToggle={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                />
+              </div>
+
               <Link 
                 to="/account" 
                 className="p-2 hover:text-accent transition-colors relative hidden md:block"
                 onClick={() => {
-                  // Navigate to wishlist tab
                   sessionStorage.setItem("account_tab", "wishlist");
                 }}
               >
@@ -154,6 +164,17 @@ const Header = () => {
                   ))}
                 </nav>
                 <div className="mt-8 pt-8 border-t border-border space-y-4">
+                  <Link
+                    to="/account"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      sessionStorage.setItem("account_tab", "notifications");
+                    }}
+                    className="flex items-center gap-3 text-foreground"
+                  >
+                    <Bell className="w-5 h-5" />
+                    <span>Notifications</span>
+                  </Link>
                   <Link
                     to="/account"
                     onClick={() => {
