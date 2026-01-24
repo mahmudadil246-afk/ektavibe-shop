@@ -2,13 +2,16 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { 
   Bell, 
+  BellRing,
   Package, 
   TrendingDown, 
   Shield, 
   Mail,
   Settings,
   Check,
-  X
+  X,
+  Smartphone,
+  AlertCircle
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -22,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 interface NotificationPreference {
   id: string;
   category: string;
@@ -85,7 +88,26 @@ const AccountNotifications = () => {
   const [preferences, setPreferences] = useState<NotificationPreference[]>(defaultPreferences);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const { permission, isSubscribed, requestPermission, unsubscribe, sendTestNotification, isSupported } = usePushNotifications();
 
+  const handlePushToggle = async () => {
+    if (isSubscribed) {
+      unsubscribe();
+      toast.success("Push notifications disabled");
+    } else {
+      const granted = await requestPermission();
+      if (granted) {
+        toast.success("Push notifications enabled!");
+      } else if (permission === 'denied') {
+        toast.error("Notifications blocked. Please enable in browser settings.");
+      }
+    }
+    setHasChanges(true);
+  };
+
+  const handleTestPush = () => {
+    sendTestNotification("Test Notification 🛍️", "This is how your notifications will appear!");
+  };
   const updatePreference = (id: string, updates: Partial<NotificationPreference>) => {
     setPreferences(prev => 
       prev.map(pref => 
@@ -137,9 +159,9 @@ const AccountNotifications = () => {
         className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
       >
         <div>
-          <h2 className="font-serif text-2xl mb-1">Email Notifications</h2>
+          <h2 className="font-serif text-2xl mb-1">Notification Preferences</h2>
           <p className="text-muted-foreground text-sm">
-            Manage how and when you receive email updates
+            Manage how and when you receive updates
           </p>
         </div>
         <div className="flex gap-2">
@@ -153,6 +175,75 @@ const AccountNotifications = () => {
           </Button>
         </div>
       </motion.div>
+
+      {/* Push Notifications Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="bg-gradient-to-r from-accent/10 to-accent/5 border border-accent/20 rounded-lg p-6"
+      >
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-accent/20 rounded-xl">
+            <BellRing className="w-6 h-6 text-accent" />
+          </div>
+          
+          <div className="flex-1">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-medium">Browser Push Notifications</h3>
+                  {isSubscribed && (
+                    <Badge className="bg-accent/20 text-accent border-0 text-xs">Active</Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Receive real-time alerts even when you're not on the site
+                </p>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                {isSupported ? (
+                  <>
+                    <Switch
+                      checked={isSubscribed}
+                      onCheckedChange={handlePushToggle}
+                      disabled={permission === 'denied'}
+                    />
+                    {isSubscribed && (
+                      <Button variant="outline" size="sm" onClick={handleTestPush}>
+                        <Smartphone className="w-4 h-4 mr-1" />
+                        Test
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <Badge variant="secondary" className="text-xs">
+                    Not supported
+                  </Badge>
+                )}
+              </div>
+            </div>
+            
+            {permission === 'denied' && (
+              <div className="flex items-center gap-2 mt-3 p-3 bg-destructive/10 rounded-lg text-sm text-destructive">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>
+                  Notifications are blocked. Please enable them in your browser settings.
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Email Section Header */}
+      <div className="flex items-center gap-2">
+        <Mail className="w-4 h-4 text-muted-foreground" />
+        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+          Email Notifications
+        </h3>
+      </div>
 
       {/* Notification Categories */}
       {Object.entries(groupedPreferences).map(([category, prefs], categoryIndex) => (
