@@ -1,7 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Package, Tag, Shield, Heart, Check, X, Trash2 } from "lucide-react";
+import { Bell, Package, Tag, Shield, Heart, Check, X, Trash2, LogIn } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { useNotifications, UserNotification } from "@/hooks/useNotifications";
 import { mockNotifications, Notification } from "@/data/mockAccountData";
 
 interface NotificationDropdownProps {
@@ -13,11 +15,34 @@ interface NotificationDropdownProps {
 type FilterType = 'all' | 'order' | 'promo' | 'security' | 'wishlist';
 
 const NotificationDropdown = ({ isOpen, onClose, onToggle }: NotificationDropdownProps) => {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  const { user } = useAuth();
+  const { 
+    notifications: dbNotifications, 
+    unreadCount: dbUnreadCount,
+    markAsRead: dbMarkAsRead,
+    markAllAsRead: dbMarkAllAsRead,
+    removeNotification: dbRemoveNotification,
+    clearAllNotifications: dbClearAll,
+    loading
+  } = useNotifications();
+  
+  // Fallback to mock data when not logged in
+  const [mockNotifs, setMockNotifs] = useState<Notification[]>(mockNotifications);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  // Convert DB notifications to display format
+  const notifications = user 
+    ? dbNotifications.map(n => ({
+        id: n.id,
+        type: n.type,
+        message: n.message,
+        date: new Date(n.created_at).toLocaleDateString(),
+        isRead: n.is_read,
+      }))
+    : mockNotifs;
+
+  const unreadCount = user ? dbUnreadCount : mockNotifs.filter(n => !n.isRead).length;
   
   const filteredNotifications = activeFilter === 'all' 
     ? notifications 
@@ -47,7 +72,7 @@ const NotificationDropdown = ({ isOpen, onClose, onToggle }: NotificationDropdow
     };
   }, [isOpen, onClose]);
 
-  const getNotificationIcon = (type: Notification['type']) => {
+  const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'order':
         return <Package className="w-4 h-4" />;
@@ -62,7 +87,7 @@ const NotificationDropdown = ({ isOpen, onClose, onToggle }: NotificationDropdow
     }
   };
 
-  const getNotificationColor = (type: Notification['type']) => {
+  const getNotificationColor = (type: string) => {
     switch (type) {
       case 'order':
         return "bg-blue-500/10 text-blue-600";
@@ -77,25 +102,39 @@ const NotificationDropdown = ({ isOpen, onClose, onToggle }: NotificationDropdow
     }
   };
 
-  const markAsRead = (id: string, e: React.MouseEvent) => {
+  const handleMarkAsRead = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, isRead: true } : n)
-    );
+    if (user) {
+      dbMarkAsRead(id);
+    } else {
+      setMockNotifs(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+  const handleMarkAllAsRead = () => {
+    if (user) {
+      dbMarkAllAsRead();
+    } else {
+      setMockNotifs(prev => prev.map(n => ({ ...n, isRead: true })));
+    }
   };
 
-  const clearAllNotifications = () => {
-    setNotifications([]);
+  const handleClearAll = () => {
+    if (user) {
+      dbClearAll();
+    } else {
+      setMockNotifs([]);
+    }
     setActiveFilter('all');
   };
 
-  const removeNotification = (id: string, e: React.MouseEvent) => {
+  const handleRemoveNotification = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    if (user) {
+      dbRemoveNotification(id);
+    } else {
+      setMockNotifs(prev => prev.filter(n => n.id !== id));
+    }
   };
 
   return (
@@ -128,7 +167,7 @@ const NotificationDropdown = ({ isOpen, onClose, onToggle }: NotificationDropdow
               <div className="flex items-center gap-3">
                 {unreadCount > 0 && (
                   <button
-                    onClick={markAllAsRead}
+                    onClick={handleMarkAllAsRead}
                     className="text-xs text-accent hover:underline"
                   >
                     Mark all as read
@@ -136,7 +175,7 @@ const NotificationDropdown = ({ isOpen, onClose, onToggle }: NotificationDropdow
                 )}
                 {notifications.length > 0 && (
                   <button
-                    onClick={clearAllNotifications}
+                    onClick={handleClearAll}
                     className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
                     title="Clear all notifications"
                   >
@@ -146,6 +185,16 @@ const NotificationDropdown = ({ isOpen, onClose, onToggle }: NotificationDropdow
                 )}
               </div>
             </div>
+
+            {/* Not logged in message */}
+            {!user && (
+              <div className="px-4 py-2 bg-accent/10 border-b border-border">
+                <Link to="/auth" onClick={onClose} className="flex items-center gap-2 text-xs text-accent hover:underline">
+                  <LogIn className="w-3 h-3" />
+                  Sign in to sync notifications
+                </Link>
+              </div>
+            )}
 
             {/* Filter Tabs */}
             <div className="flex gap-1 px-3 py-2 border-b border-border overflow-x-auto">
@@ -178,7 +227,12 @@ const NotificationDropdown = ({ isOpen, onClose, onToggle }: NotificationDropdow
 
             {/* Notification List */}
             <div className="max-h-[350px] overflow-y-auto">
-              {filteredNotifications.length === 0 ? (
+              {loading ? (
+                <div className="py-12 text-center text-muted-foreground">
+                  <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                  <p className="text-sm">Loading...</p>
+                </div>
+              ) : filteredNotifications.length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground">
                   <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">No {activeFilter === 'all' ? '' : activeFilter} notifications</p>
@@ -213,7 +267,7 @@ const NotificationDropdown = ({ isOpen, onClose, onToggle }: NotificationDropdow
                       <div className="absolute right-2 top-1/2 -translate-y-1/2 hidden group-hover:flex gap-1">
                         {!notification.isRead && (
                           <button
-                            onClick={(e) => markAsRead(notification.id, e)}
+                            onClick={(e) => handleMarkAsRead(notification.id, e)}
                             className="p-1.5 bg-background border border-border rounded-md hover:bg-secondary"
                             title="Mark as read"
                           >
@@ -221,7 +275,7 @@ const NotificationDropdown = ({ isOpen, onClose, onToggle }: NotificationDropdow
                           </button>
                         )}
                         <button
-                          onClick={(e) => removeNotification(notification.id, e)}
+                          onClick={(e) => handleRemoveNotification(notification.id, e)}
                           className="p-1.5 bg-background border border-border rounded-md hover:bg-destructive/10 hover:text-destructive"
                           title="Remove"
                         >

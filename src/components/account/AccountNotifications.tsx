@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   Bell, 
@@ -11,7 +11,8 @@ import {
   Check,
   X,
   Smartphone,
-  AlertCircle
+  AlertCircle,
+  LogIn
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -26,69 +27,60 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
-interface NotificationPreference {
-  id: string;
-  category: string;
-  icon: React.ElementType;
-  title: string;
-  description: string;
+import { useNotificationPreferences, DEFAULT_PREFERENCES } from "@/hooks/useNotificationPreferences";
+import { useAuth } from "@/context/AuthContext";
+import { Link } from "react-router-dom";
+
+const iconMap: Record<string, React.ElementType> = {
+  Package,
+  TrendingDown,
+  Bell,
+  Shield,
+  Mail,
+};
+
+interface LocalPreference {
+  key: string;
   emailEnabled: boolean;
+  pushEnabled: boolean;
   frequency: 'instant' | 'daily' | 'weekly' | 'never';
 }
 
-const defaultPreferences: NotificationPreference[] = [
-  {
-    id: 'order_updates',
-    category: 'orders',
-    icon: Package,
-    title: 'Order Updates',
-    description: 'Get notified about order confirmations, shipping updates, and delivery status',
-    emailEnabled: true,
-    frequency: 'instant'
-  },
-  {
-    id: 'price_drops',
-    category: 'wishlist',
-    icon: TrendingDown,
-    title: 'Price Drop Alerts',
-    description: 'Receive alerts when items in your wishlist go on sale',
-    emailEnabled: true,
-    frequency: 'instant'
-  },
-  {
-    id: 'back_in_stock',
-    category: 'wishlist',
-    icon: Bell,
-    title: 'Back in Stock',
-    description: 'Get notified when out-of-stock wishlist items become available',
-    emailEnabled: true,
-    frequency: 'instant'
-  },
-  {
-    id: 'security_alerts',
-    category: 'security',
-    icon: Shield,
-    title: 'Security Alerts',
-    description: 'Important alerts about new logins, password changes, and suspicious activity',
-    emailEnabled: true,
-    frequency: 'instant'
-  },
-  {
-    id: 'promotions',
-    category: 'marketing',
-    icon: Mail,
-    title: 'Promotions & Offers',
-    description: 'Exclusive deals, seasonal sales, and special offers',
-    emailEnabled: false,
-    frequency: 'weekly'
-  }
-];
-
 const AccountNotifications = () => {
-  const [preferences, setPreferences] = useState<NotificationPreference[]>(defaultPreferences);
-  const [isSaving, setIsSaving] = useState(false);
+  const { user } = useAuth();
+  const { 
+    getPreferenceValue, 
+    updatePreference, 
+    loading: prefsLoading,
+    saving 
+  } = useNotificationPreferences();
+  const { 
+    permission, 
+    isSubscribed, 
+    requestPermission, 
+    unsubscribe, 
+    sendTestNotification, 
+    isSupported 
+  } = usePushNotifications();
+
+  const [localPreferences, setLocalPreferences] = useState<LocalPreference[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
-  const { permission, isSubscribed, requestPermission, unsubscribe, sendTestNotification, isSupported } = usePushNotifications();
+
+  // Initialize local preferences from DB or defaults
+  useEffect(() => {
+    if (!prefsLoading) {
+      const prefs = DEFAULT_PREFERENCES.map(config => {
+        const dbPref = getPreferenceValue(config.key);
+        return {
+          key: config.key,
+          emailEnabled: dbPref.emailEnabled,
+          pushEnabled: dbPref.pushEnabled,
+          frequency: dbPref.frequency as LocalPreference['frequency'],
+        };
+      });
+      setLocalPreferences(prefs);
+    }
+  }, [prefsLoading, getPreferenceValue]);
 
   const handlePushToggle = async () => {
     if (isSubscribed) {
@@ -108,39 +100,61 @@ const AccountNotifications = () => {
   const handleTestPush = () => {
     sendTestNotification("Test Notification 🛍️", "This is how your notifications will appear!");
   };
-  const updatePreference = (id: string, updates: Partial<NotificationPreference>) => {
-    setPreferences(prev => 
+
+  const updateLocalPreference = (key: string, updates: Partial<LocalPreference>) => {
+    setLocalPreferences(prev => 
       prev.map(pref => 
-        pref.id === id ? { ...pref, ...updates } : pref
+        pref.key === key ? { ...pref, ...updates } : pref
       )
     );
     setHasChanges(true);
   };
 
   const handleSave = async () => {
-    setIsSaving(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsSaving(false);
-    setHasChanges(false);
-    toast.success("Notification preferences saved!");
+    if (!user) {
+      toast.error("Please sign in to save preferences");
+      return;
+    }
+
+    try {
+      for (const pref of localPreferences) {
+        await updatePreference(pref.key, {
+          email_enabled: pref.emailEnabled,
+          push_enabled: pref.pushEnabled,
+          frequency: pref.frequency,
+        });
+      }
+      setHasChanges(false);
+      toast.success("Notification preferences saved!");
+    } catch (error) {
+      toast.error("Failed to save preferences");
+    }
   };
 
   const enableAll = () => {
-    setPreferences(prev => prev.map(pref => ({ ...pref, emailEnabled: true })));
+    setLocalPreferences(prev => prev.map(pref => ({ ...pref, emailEnabled: true })));
     setHasChanges(true);
   };
 
   const disableAll = () => {
-    setPreferences(prev => prev.map(pref => ({ ...pref, emailEnabled: false })));
+    setLocalPreferences(prev => prev.map(pref => ({ ...pref, emailEnabled: false })));
     setHasChanges(true);
   };
 
+  const getLocalPref = (key: string) => {
+    return localPreferences.find(p => p.key === key) || {
+      key,
+      emailEnabled: true,
+      pushEnabled: false,
+      frequency: 'instant' as const,
+    };
+  };
+
   const groupedPreferences = {
-    orders: preferences.filter(p => p.category === 'orders'),
-    wishlist: preferences.filter(p => p.category === 'wishlist'),
-    security: preferences.filter(p => p.category === 'security'),
-    marketing: preferences.filter(p => p.category === 'marketing'),
+    orders: DEFAULT_PREFERENCES.filter(p => p.category === 'orders'),
+    wishlist: DEFAULT_PREFERENCES.filter(p => p.category === 'wishlist'),
+    security: DEFAULT_PREFERENCES.filter(p => p.category === 'security'),
+    marketing: DEFAULT_PREFERENCES.filter(p => p.category === 'marketing'),
   };
 
   const categoryLabels: Record<string, string> = {
@@ -149,6 +163,24 @@ const AccountNotifications = () => {
     security: 'Security & Account',
     marketing: 'Marketing & Promotions'
   };
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <LogIn className="w-12 h-12 text-muted-foreground mb-4" />
+        <h2 className="font-serif text-2xl mb-2">Sign in Required</h2>
+        <p className="text-muted-foreground mb-6 max-w-md">
+          Please sign in to manage your notification preferences. Your settings will be synced across all devices.
+        </p>
+        <Link to="/auth">
+          <Button>
+            <LogIn className="w-4 h-4 mr-2" />
+            Sign In
+          </Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -246,7 +278,7 @@ const AccountNotifications = () => {
       </div>
 
       {/* Notification Categories */}
-      {Object.entries(groupedPreferences).map(([category, prefs], categoryIndex) => (
+      {Object.entries(groupedPreferences).map(([category, configs], categoryIndex) => (
         <motion.div
           key={category}
           initial={{ opacity: 0, y: 10 }}
@@ -257,61 +289,66 @@ const AccountNotifications = () => {
           <div className="flex items-center gap-2 mb-4">
             <h3 className="font-medium">{categoryLabels[category]}</h3>
             <Badge variant="secondary" className="text-xs">
-              {prefs.filter(p => p.emailEnabled).length}/{prefs.length} enabled
+              {configs.filter(c => getLocalPref(c.key).emailEnabled).length}/{configs.length} enabled
             </Badge>
           </div>
           
           <div className="space-y-4">
-            {prefs.map((pref, index) => (
-              <div key={pref.id}>
-                {index > 0 && <Separator className="my-4" />}
-                <div className="flex items-start gap-4">
-                  <div className="p-2 bg-background rounded-lg">
-                    <pref.icon className="w-5 h-5 text-accent" />
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium text-sm">{pref.title}</h4>
+            {configs.map((config, index) => {
+              const Icon = iconMap[config.icon] || Bell;
+              const pref = getLocalPref(config.key);
+              
+              return (
+                <div key={config.key}>
+                  {index > 0 && <Separator className="my-4" />}
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 bg-background rounded-lg">
+                      <Icon className="w-5 h-5 text-accent" />
                     </div>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      {pref.description}
-                    </p>
                     
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">Email</span>
-                        <Switch
-                          checked={pref.emailEnabled}
-                          onCheckedChange={(checked) => 
-                            updatePreference(pref.id, { emailEnabled: checked })
-                          }
-                        />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-medium text-sm">{config.title}</h4>
                       </div>
+                      <p className="text-xs text-muted-foreground mb-3">
+                        {config.description}
+                      </p>
                       
-                      {pref.emailEnabled && (
-                        <Select
-                          value={pref.frequency}
-                          onValueChange={(value: NotificationPreference['frequency']) =>
-                            updatePreference(pref.id, { frequency: value })
-                          }
-                        >
-                          <SelectTrigger className="w-32 h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="instant">Instant</SelectItem>
-                            <SelectItem value="daily">Daily Digest</SelectItem>
-                            <SelectItem value="weekly">Weekly Digest</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <Mail className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">Email</span>
+                          <Switch
+                            checked={pref.emailEnabled}
+                            onCheckedChange={(checked) => 
+                              updateLocalPreference(config.key, { emailEnabled: checked })
+                            }
+                          />
+                        </div>
+                        
+                        {pref.emailEnabled && (
+                          <Select
+                            value={pref.frequency}
+                            onValueChange={(value: LocalPreference['frequency']) =>
+                              updateLocalPreference(config.key, { frequency: value })
+                            }
+                          >
+                            <SelectTrigger className="w-32 h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="instant">Instant</SelectItem>
+                              <SelectItem value="daily">Daily Digest</SelectItem>
+                              <SelectItem value="weekly">Weekly Digest</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </motion.div>
       ))}
@@ -334,13 +371,13 @@ const AccountNotifications = () => {
             </p>
             <div className="flex flex-wrap gap-2 text-xs">
               <Badge variant="outline">
-                {preferences.filter(p => p.emailEnabled && p.frequency === 'instant').length} instant
+                {localPreferences.filter(p => p.emailEnabled && p.frequency === 'instant').length} instant
               </Badge>
               <Badge variant="outline">
-                {preferences.filter(p => p.emailEnabled && p.frequency === 'daily').length} daily digest
+                {localPreferences.filter(p => p.emailEnabled && p.frequency === 'daily').length} daily digest
               </Badge>
               <Badge variant="outline">
-                {preferences.filter(p => p.emailEnabled && p.frequency === 'weekly').length} weekly digest
+                {localPreferences.filter(p => p.emailEnabled && p.frequency === 'weekly').length} weekly digest
               </Badge>
             </div>
           </div>
@@ -356,10 +393,10 @@ const AccountNotifications = () => {
         >
           <Button 
             onClick={handleSave} 
-            disabled={isSaving}
+            disabled={saving}
             className="shadow-lg"
           >
-            {isSaving ? "Saving..." : "Save Preferences"}
+            {saving ? "Saving..." : "Save Preferences"}
           </Button>
         </motion.div>
       )}
