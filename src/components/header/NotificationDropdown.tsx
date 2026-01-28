@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Package, Tag, Shield, Heart, Check, X } from "lucide-react";
+import { Bell, Package, Tag, Shield, Heart, Check, X, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { mockNotifications, Notification } from "@/data/mockAccountData";
 
@@ -88,6 +88,11 @@ const NotificationDropdown = ({ isOpen, onClose, onToggle }: NotificationDropdow
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
   };
 
+  const clearAllNotifications = () => {
+    setNotifications([]);
+    setActiveFilter('all');
+  };
+
   const removeNotification = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setNotifications(prev => prev.filter(n => n.id !== id));
@@ -120,14 +125,26 @@ const NotificationDropdown = ({ isOpen, onClose, onToggle }: NotificationDropdow
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-secondary/50">
               <h3 className="font-medium text-sm">Notifications</h3>
-              {unreadCount > 0 && (
-                <button
-                  onClick={markAllAsRead}
-                  className="text-xs text-accent hover:underline"
-                >
-                  Mark all as read
-                </button>
-              )}
+              <div className="flex items-center gap-3">
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllAsRead}
+                    className="text-xs text-accent hover:underline"
+                  >
+                    Mark all as read
+                  </button>
+                )}
+                {notifications.length > 0 && (
+                  <button
+                    onClick={clearAllNotifications}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                    title="Clear all notifications"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Clear all
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Filter Tabs */}
